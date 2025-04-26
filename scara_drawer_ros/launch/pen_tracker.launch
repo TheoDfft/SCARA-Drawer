@@ -1,0 +1,14 @@
+<launch>
+    <arg name="visualize" default="true" />
+    <arg name="marker_size" default="0.02" />
+
+    <include file="$(find aruco_ros)/launch/marker_publisher.launch">
+        <arg name="marker_size" value="$(arg marker_size)" />
+    </include>
+
+    <group if="$(arg visualize)">
+        <node pkg="rviz" type="rviz" name="rviz" args="-d $(find scara_drawer_ros)/rviz/pen_tracker.rviz" />
+    </group>
+
+    <!-- <node pkg="scara_drawer_ros" type="pen_tracker" name="pen_tracker" /> -->
+</launch>
