@@ -1,5 +1,5 @@
 <launch>
-    <node pkg="tf" type="static_transform_publisher" name="camera_transform_publisher" args="0 0 0 0 0 0 1 world camera_link 100" />
+    <node pkg="tf" type="static_transform_publisher" name="camera_transform_publisher" args="0.2 0.2 0.5 1 0 0 0 world camera_link 100" />
     
     <arg name="visualize" default="true" />
     <arg name="markerSize" default="0.02" />
