@@ -1,0 +1,13 @@
+<launch>
+    <!-- Arguments -->
+    <arg name="bag_file" default="$(find scara_drawer_ros)/data/test_pose_player.bag" doc="Path to the bag file to play"/>
+    <arg name="min_distance_threshold" default="0.001" doc="Minimum distance threshold in meters"/>
+    <arg name="path_time" default="0.05" doc="Path time for each movement in seconds"/>
+    
+    <!-- Start the bag pose player node -->
+    <node pkg="scara_drawer_ros" type="bag_pose_player.py" name="bag_pose_player" output="screen">
+        <param name="bag_file" value="$(arg bag_file)"/>
+        <param name="min_distance_threshold" value="$(arg min_distance_threshold)"/>
+        <param name="path_time" value="$(arg path_time)"/>
+    </node>
+</launch> 
