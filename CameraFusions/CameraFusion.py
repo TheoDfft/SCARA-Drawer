@@ -5,23 +5,19 @@ import numpy.typing as npt
 import numpy.linalg as la
 
 
-Vector3D = Annotated[npt.NDArray[np.float64], (3,)]
-Vector7D = Annotated[npt.NDArray[np.float64], (7,)]
+Position = Annotated[npt.NDArray[np.float64], (3,)]
+Quaternion = Annotated[npt.NDArray[np.float64], (4,)]
+Pose = Annotated[npt.NDArray[np.float64], (7,)]
 Vector36D = Annotated[npt.NDArray[np.float64], (36,)]
 Matrix3x3 = Annotated[npt.NDArray[np.float64], (3, 3)]
-Matrix6x6 = Annotated[npt.NDArray[np.float64], (6, 6)]
+PoseCovariance = Annotated[npt.NDArray[np.float64], (6, 6)]
 
 
-class Point:
-    def __init__(self, vec: Vector3D):
-        self.x = vec[0]
-        self.y = vec[1]
-        self.z = vec[2]
 
 
-def position_fusion(pos1: Vector3D, pos2: Vector3D,
-                    covariance1: Vector36D, covariance2: Vector36D) -> Tuple[Vector3D, Matrix3x3]:
-    cov1, cov2 = _convert_covariances(covariance1, covariance2)
+def position_fusion(pos1: Position, pos2: Position,
+                    covariance1: Vector36D, covariance2: Vector36D) -> Tuple[Position, Matrix3x3]:
+    cov1, cov2 = _create_pos_covariances(covariance1, covariance2)
 
     cov1_inv: Matrix3x3 = cholesky_inverse(cov1)
     cov2_inv: Matrix3x3 = cholesky_inverse(cov2)
@@ -35,15 +31,15 @@ def position_fusion(pos1: Vector3D, pos2: Vector3D,
 
     #Calculate the fused covariance and position
     cov: Matrix3x3 = cholesky_inverse(cov1_inv + cov2_inv)
-    pos: Vector3D = cov @ (((w1*cov1_inv) @ pos1) + ((w2*cov2_inv) @ pos2))
+    pos: Position = cov @ (((w1 * cov1_inv) @ pos1) + ((w2 * cov2_inv) @ pos2))
 
     return pos, cov
 
 
-def _convert_covariances(covariance1, covariance2) -> Tuple[Matrix3x3, Matrix3x3]:
-    """Convert covariance matrices to 3x3 position only"""
-    posecov1: Matrix6x6 = covariance1.reshape(6, 6)
-    posecov2: Matrix6x6 = covariance2.reshape(6, 6)
+def _create_pos_covariances(covariance1, covariance2) -> Tuple[Matrix3x3, Matrix3x3]:
+    """Convert covariance matrices to position covariances only"""
+    posecov1: PoseCovariance = covariance1.reshape(6, 6)
+    posecov2: PoseCovariance = covariance2.reshape(6, 6)
     cov1: Matrix3x3 = posecov1[:3, :3]
     cov2: Matrix3x3 = posecov2[:3, :3]
     return cov1, cov2
