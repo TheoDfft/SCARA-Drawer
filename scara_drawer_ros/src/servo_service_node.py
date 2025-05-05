@@ -5,8 +5,8 @@ import sys
 import os
 import signal
 from servo_control import ServoController
-from open_manipulator_msgs.srv import SetJointPosition
-from open_manipulator_msgs.srv import SetJointPositionResponse
+from open_manipulator_msgs.srv import SetJointPosition, SetJointPositionRequest, SetJointPositionResponse
+from open_manipulator_msgs.msg import JointPosition
 
 class ServoServiceNode:
     def __init__(self):
@@ -14,15 +14,25 @@ class ServoServiceNode:
         rospy.init_node('servo_service_node')
         rospy.loginfo("Starting Servo Service Node")
         
+        # Get parameters from the parameter server
+        gpio_pin = rospy.get_param('~gpio_pin', 17)
+        initial_angle = rospy.get_param('~initial_angle', 0)
+        
         # Initialize servo controller
-        self.servo = ServoController(pin=17, initial_angle=0)
-        rospy.loginfo("Servo controller initialized")
+        try:
+            self.servo = ServoController(pin=gpio_pin, initial_angle=initial_angle)
+            rospy.loginfo(f"Servo controller initialized on GPIO pin {gpio_pin}")
+        except Exception as e:
+            rospy.logerr(f"Failed to initialize servo controller: {e}")
+            rospy.logerr("Make sure you have permission to access GPIO pins (try running with sudo)")
+            sys.exit(1)
         
         # Create service server for gripper control
-        self.tool_service = rospy.Service('/open_manipulator/goal_tool_control', 
+        # The OpenManipulator GUI uses this service to control the gripper
+        self.tool_service = rospy.Service('/goal_tool_control', 
                                          SetJointPosition, 
                                          self.tool_control_callback)
-        rospy.loginfo("Tool control service created")
+        rospy.loginfo("Tool control service created at /goal_tool_control")
         
         # Set up signal handling for clean shutdown
         signal.signal(signal.SIGINT, self.signal_handler)
@@ -33,25 +43,43 @@ class ServoServiceNode:
         Handle tool control service requests
         Maps gripper open/close to pen_up/pen_down
         """
-        position = req.joint_position.position
+        rospy.loginfo(f"Received tool control request: {req}")
         
-        # OpenManipulator typically uses values around -0.01 (closed) and 0.01 (open)
-        # We'll use a threshold value to determine open vs closed
-        if len(position) > 0:
-            # Positive value typically means open gripper
-            if position[0] > 0:
-                rospy.loginfo("Received request to open gripper - calling pen_up()")
-                self.servo.pen_up()
-            # Negative or zero value typically means close gripper
+        try:
+            # Check the joint position field existence first
+            if not hasattr(req, 'joint_position'):
+                rospy.logerr("Request doesn't have joint_position field")
+                return SetJointPositionResponse(is_planned=False)
+            
+            # Get the position array
+            position = req.joint_position.position
+            
+            if len(position) > 0:
+                rospy.loginfo(f"Gripper position value: {position[0]}")
+                # Positive value typically means open gripper
+                if position[0] > 0:
+                    rospy.loginfo("Received request to open gripper - calling pen_up()")
+                    self.servo.pen_up()
+                # Negative or zero value typically means close gripper
+                else:
+                    rospy.loginfo("Received request to close gripper - calling pen_down()")
+                    # You could map different closing values to different pen_down angles if needed
+                    self.servo.pen_down()
             else:
-                rospy.loginfo("Received request to close gripper - calling pen_down()")
-                # You could map different closing values to different pen_down angles if needed
-                self.servo.pen_down()
-        
-        # Return success response
-        response = SetJointPositionResponse()
-        response.is_planned = True
-        return response
+                rospy.logwarn("Position array is empty")
+                
+            # Create and return a proper response
+            response = SetJointPositionResponse()
+            response.is_planned = True
+            return response
+            
+        except Exception as e:
+            rospy.logerr(f"Error processing tool control request: {e}")
+            import traceback
+            rospy.logerr(traceback.format_exc())
+            response = SetJointPositionResponse()
+            response.is_planned = False
+            return response
     
     def signal_handler(self, sig, frame):
         """Handle clean shutdown when Ctrl+C is pressed"""
@@ -61,6 +89,7 @@ class ServoServiceNode:
     
     def run(self):
         """Run the node"""
+        rospy.loginfo("Servo service node running. Press Ctrl+C to exit.")
         rospy.spin()
         
 if __name__ == "__main__":

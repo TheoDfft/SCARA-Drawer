@@ -1,6 +1,8 @@
 <launch>
   <!-- Start the servo service node -->
-  <node pkg="your_package_name" type="servo_service_node.py" name="servo_service_node" output="screen" required="true">
-    <!-- You can add parameters here if needed -->
+  <node pkg="scara_drawer_ros" type="servo_service_node.py" name="servo_service_node" output="screen" respawn="true">
+    <!-- Optional parameters -->
+    <param name="gpio_pin" value="17"/>
+    <param name="initial_angle" value="0"/>
   </node>
-</launch> 
+</launch>
