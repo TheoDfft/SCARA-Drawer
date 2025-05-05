@@ -17,6 +17,7 @@
     <group if="$(arg visualize)">
         <node pkg="rviz" type="rviz" name="rviz" args="-d $(find scara_drawer_ros)/rviz/pen_tracker.rviz" />
         <!-- <node pkg="scara_drawer_ros" type="visualize_markers.py" name="visualize_markers" /> -->
+        <!-- <node pkg="scara_drawer_ros" type="visualize_markers.py" name="visualize_markers" /> -->
     </group>
 
     <!-- <node pkg="scara_drawer_ros" type="pen_tracker" name="pen_tracker" /> -->
