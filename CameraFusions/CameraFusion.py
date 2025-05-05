@@ -3,6 +3,7 @@ import numpy as np
 import numpy.typing as npt
 import numpy.linalg as la
 
+
 Matrix3x3 = Annotated[npt.NDArray[np.float64], (3, 3)]
 Matrix4x4 = Annotated[npt.NDArray[np.float64], (4, 4)]
 PoseCovariance = Annotated[npt.NDArray[np.float64], (6, 6)]
@@ -29,7 +30,7 @@ class Position:
         else:
             raise TypeError(f"Unsupported operand type for @: 'Position' and '{type(other).__name__}'")
 
-class Quarternion:
+class Quaternion:
     def __init__(self, w: float, x: float, y: float, z: float):
         self.w: float = w
         self.x: float = x
@@ -40,25 +41,25 @@ class Quarternion:
         return np.array([self.w, self.x, self.y, self.z])
 
     @staticmethod
-    def from_array(array) -> 'Quarternion':
-        return Quarternion(array[0], array[1], array[2], array[3])
+    def from_array(array) -> 'Quaternion':
+        return Quaternion(array[0], array[1], array[2], array[3])
 
     def __matmul__(self, other) -> float:
-        if isinstance(other, Quarternion):
+        if isinstance(other, Quaternion):
             return self.w * other.w + self.x * other.x + self.y * other.y + self.z * other.z
         elif isinstance(other, np.ndarray):
             return np.dot(self.to_array(), other)
         else:
-            raise TypeError(f"Unsupported operand type for @: 'Quarternion' and '{type(other).__name__}'")
+            raise TypeError(f"Unsupported operand type for @: 'Quaternion' and '{type(other).__name__}'")
 
-    def __truediv__(self, scalar: float) -> "Quarternion":
-        return Quarternion(self.w / scalar, self.x / scalar,
+    def __truediv__(self, scalar: float) -> "Quaternion":
+        return Quaternion(self.w / scalar, self.x / scalar,
                            self.y / scalar, self.z / scalar)
 
 class Pose:
-    def __init__(self, position: Position, q: Quarternion):
+    def __init__(self, position: Position, q: Quaternion):
         self.Position: Position = position
-        self.q: Quarternion = q
+        self.q: Quaternion = q
 
 
 def pose_fusion(pose1: Pose, pose2: Pose, covariance1: PoseCovariance, covariance2: PoseCovariance) -> Tuple[Pose, PoseCovariance]:
@@ -68,8 +69,8 @@ def pose_fusion(pose1: Pose, pose2: Pose, covariance1: PoseCovariance, covarianc
     orientation_cov2 = covariance2[3:, 3:]
     pos, pos_cov = position_fusion(pose1.Position, pose2.Position, pos_cov1, pos_cov2)
 
-    quaternion1: Quarternion = pose1.q
-    quaternion2: Quarternion = pose2.q
+    quaternion1: Quaternion = pose1.q
+    quaternion2: Quaternion = pose2.q
     orientation, orientation_cov = orientation_fusion(quaternion1, quaternion2,
                                                       orientation_cov1, orientation_cov2)
 
@@ -99,8 +100,8 @@ def position_fusion(pos1: Position, pos2: Position,
     return pos, cov
 
 
-def orientation_fusion(q1: Quarternion, q2: Quarternion,
-                       cov1: Matrix3x3, cov2: Matrix3x3) -> Tuple[Quarternion, Matrix3x3]:
+def orientation_fusion(q1: Quaternion, q2: Quaternion,
+                       cov1: Matrix3x3, cov2: Matrix3x3) -> Tuple[Quaternion, Matrix3x3]:
     #Normalize the quaternions
     q1 = q1 / np.linalg.norm(q1.to_array())
     q2 = q2 / np.linalg.norm(q2.to_array())
@@ -136,7 +137,7 @@ def orientation_fusion(q1: Quarternion, q2: Quarternion,
         # Fallback to simple averaging if decomposition fails
         return (q1 + q2) / np.linalg.norm(q1 + q2)
     # Taking the last EigenVector = the Eigenvector respective to the largest Eigenvalue
-    q: Quarternion = Quarternion.from_array(eigenvectors[:, np.argmax(eigenvalues)])
+    q: Quaternion = Quaternion.from_array(eigenvectors[:, np.argmax(eigenvalues)])
     # Normalize the quaternion
     q /= np.linalg.norm(q)
 
