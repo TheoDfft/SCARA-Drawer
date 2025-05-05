@@ -8,19 +8,17 @@ import numpy.linalg as la
 Position = Annotated[npt.NDArray[np.float64], (3,)]
 Quaternion = Annotated[npt.NDArray[np.float64], (4,)]
 Pose = Annotated[npt.NDArray[np.float64], (7,)]
-Vector36D = Annotated[npt.NDArray[np.float64], (36,)]
 Matrix3x3 = Annotated[npt.NDArray[np.float64], (3, 3)]
 Matrix4x4 = Annotated[npt.NDArray[np.float64], (4, 4)]
 PoseCovariance = Annotated[npt.NDArray[np.float64], (6, 6)]
 
 
-def pose_fusion(pose1: Pose, pose2: Pose, covariance1: Vector36D, covariance2: Vector36D) -> Tuple[Pose, Vector36D]:
-    posecov1: PoseCovariance = covariance1.reshape(6, 6)
-    posecov2: PoseCovariance = covariance2.reshape(6, 6)
-    pos_cov1 = posecov1[:3, :3]
-    pos_cov2 = posecov2[:3, :3]
-    orientation_cov1 = posecov1[3:, 3:]
-    orientation_cov2 = posecov1[3:, 3:]
+
+def pose_fusion(pose1: Pose, pose2: Pose, covariance1: PoseCovariance, covariance2: PoseCovariance) -> Tuple[Pose, PoseCovariance]:
+    pos_cov1 = covariance1[:3, :3]
+    pos_cov2 = covariance2[:3, :3]
+    orientation_cov1 = covariance1[3:, 3:]
+    orientation_cov2 = covariance2[3:, 3:]
     pos, pos_cov = position_fusion(pose1[:3], pose2[:3], pos_cov1, pos_cov2)
 
     quaternion1: Quaternion = pose1[3:]
@@ -29,8 +27,8 @@ def pose_fusion(pose1: Pose, pose2: Pose, covariance1: Vector36D, covariance2: V
                                                       orientation_cov1, orientation_cov2)
 
     zeros: Matrix3x3 = np.zeros((3, 3))
-    covariance: Vector36D = np.block([[pos_cov, zeros],
-                                      [zeros, orientation_cov]]).flatten()
+    covariance: PoseCovariance = np.block([[pos_cov, zeros],
+                                           [zeros, orientation_cov]])
     pose: Pose = np.concatenate(pos, orientation)
     return pose, covariance
 
