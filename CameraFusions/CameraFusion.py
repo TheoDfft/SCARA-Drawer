@@ -118,7 +118,7 @@ def orientation_fusion(q1: Quaternion, q2: Quaternion,
     w1: float = 1/(np.trace(cov1) + 1e-9)
     w2: float = 1/(np.trace(cov2) + 1e-9)
 
-    ################## CONSIDER AFTER A LOT OF DATA FOR BUILDING THE COVARIANCE MATRICES
+    ##################TODO CONSIDER AFTER A LOT OF DATA FOR BUILDING THE COVARIANCE MATRICES
     # Using det
     # w1: float = 1 / (np.linalg.det(cov1) + 1e-9)
     # w2: float = 1 / (np.linalg.det(cov2) + 1e-9)
