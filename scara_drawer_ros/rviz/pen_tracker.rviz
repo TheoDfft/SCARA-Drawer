@@ -10,6 +10,7 @@ Panels:
         - /TF1/Frames1
         - /Image1
         - /PoseArray1
+        - /Pose1
         - /PoseWithCovariance1
       Splitter Ratio: 0.5
     Tree Height: 397
@@ -63,9 +64,9 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: true
-        aruco_cube_link:
+        aruco_marker_link:
           Value: true
-        camera:
+        camera_link:
           Value: true
         pen_tip:
           Value: true
@@ -78,17 +79,17 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        aruco_cube_link:
+        aruco_marker_link:
           pen_tip:
             {}
         world:
-          camera:
+          camera_link:
             {}
       Update Interval: 0
       Value: true
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /camera/image
+      Image Topic: /aruco_single/result
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -120,7 +121,7 @@ Visualization Manager:
       Axes Radius: 0.10000000149011612
       Class: rviz/Pose
       Color: 255; 25; 0
-      Enabled: false
+      Enabled: true
       Head Length: 0.30000001192092896
       Head Radius: 0.10000000149011612
       Name: Pose
@@ -130,7 +131,7 @@ Visualization Manager:
       Shape: Arrow
       Topic: ""
       Unreliable: false
-      Value: false
+      Value: true
     - Alpha: 1
       Axes Length: 1
       Axes Radius: 0.10000000149011612

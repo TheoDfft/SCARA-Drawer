@@ -14,11 +14,26 @@
         <arg name="markerId" value="5" />
     </include>
 
+    <!-- <node pkg="scara_drawer_ros" type="pose_fused_publisher.py" name="pose_fused_publisher" output="screen"/> -->
+
+    <!-- Launch the Pen Tracking Controller -->
+    <node pkg="scara_drawer_ros" type="pen_tracking_controller.py" name="pen_tracking_controller" output="screen">
+        <param name="control_rate" value="3.0" /> <!-- Hz (Match bag rate) -->
+        <param name="max_velocity" value="0.2" /> <!-- m/s (Increased) -->
+        <param name="goal_tolerance" value="0.0005" /> <!-- meters (Reduced) -->
+    </node>
+
+    <!-- Play the test bag file -->
+    <node pkg="rosbag" type="play" name="pose_player" args="--clock $(find scara_drawer_ros)/data/test_pose_player.bag /tool/kinematics_pose:=/tool/desired_pose"/>
+    <include file="$(find aruco_ros)/launch/single.launch">
+        <arg name="markerSize" value="$(arg markerSize)" />
+        <arg name="markerId" value="5" />
+    </include>
+
     <group if="$(arg visualize)">
         <node pkg="rviz" type="rviz" name="rviz" args="-d $(find scara_drawer_ros)/rviz/pen_tracker.rviz" />
         <!-- <node pkg="scara_drawer_ros" type="visualize_markers.py" name="visualize_markers" /> -->
         <!-- <node pkg="scara_drawer_ros" type="visualize_markers.py" name="visualize_markers" /> -->
     </group>
 
-    <!-- <node pkg="scara_drawer_ros" type="pen_tracker" name="pen_tracker" /> -->
 </launch>
