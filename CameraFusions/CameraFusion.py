@@ -1,4 +1,4 @@
-from typing import Tuple, Annotated
+from typing import Tuple, Annotated, Union
 import numpy as np
 import numpy.typing as npt
 import numpy.linalg as la
@@ -15,14 +15,14 @@ class Position:
         self.y: float = y
         self.z: float = z
 
-    def to_array(self):
+    def to_array(self) -> np.ndarray:
         return np.array([self.x, self.y, self.z])
 
     @staticmethod
     def from_array(array) -> 'Position':
         return Position(array[0], array[1], array[2])
 
-    def __matmul__(self, other) -> float:
+    def __matmul__(self, other: Union['Position', np.ndarray]) -> float:
         if isinstance(other, Position):
             return self.x * other.x + self.y * other.y + self.z * other.z
         elif isinstance(other, np.ndarray):
@@ -44,7 +44,7 @@ class Quaternion:
     def from_array(array) -> 'Quaternion':
         return Quaternion(array[0], array[1], array[2], array[3])
 
-    def __matmul__(self, other) -> float:
+    def __matmul__(self, other: Union['Quaternion', np.ndarray]) -> float:
         if isinstance(other, Quaternion):
             return self.w * other.w + self.x * other.x + self.y * other.y + self.z * other.z
         elif isinstance(other, np.ndarray):
@@ -52,7 +52,7 @@ class Quaternion:
         else:
             raise TypeError(f"Unsupported operand type for @: 'Quaternion' and '{type(other).__name__}'")
 
-    def __truediv__(self, scalar: float) -> "Quaternion":
+    def __truediv__(self, scalar: float) -> 'Quaternion':
         return Quaternion(self.w / scalar, self.x / scalar,
                            self.y / scalar, self.z / scalar)
 
@@ -163,3 +163,4 @@ def cholesky_inverse(mat: Matrix3x3) -> Matrix3x3:
     L = la.cholesky(mat)
     L_inv = la.solve(L, np.eye(3))
     return L_inv.T @ L_inv
+
