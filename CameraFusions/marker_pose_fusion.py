@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from enum import Enum, auto
-from typing import Deque
+from typing import Deque, Final
 from collections import deque
 
 import rospy
@@ -55,9 +55,7 @@ class MarkerPoseFusion:
         #Fields for pose fusion
         self._fused_pose: PoseStamped = PoseStamped()
 
-        self._pose_window: Deque[Pose] = deque(maxlen = _FILTERING_MOVING_WINDOW_LENGTH)
-        '''A moving window of a number of pose measurements to filter for a smooth signal.'''
-        self._filter_type: FilterType = FilterType.noFilter
+        self.setup_filter(FilterType.noFilter)
 
         self.camera1_cov: Matrix3x3 #TODO fill with some values - will be dynamic in the future
         self.camera2_cov: Matrix3x3 #TODO fill with some values - will be dynamic in the future
@@ -91,8 +89,8 @@ class MarkerPoseFusion:
             # --- Fusion Logic Goes Here ---
             fused_pose, _ = pose_fusion(self.latest_pose_1, self.latest_pose_2, self.camera1_cov, self.camera2_cov)
             # -----------------------------
-            self._pose_window.append(fused_pose)
-            _fill_pose_stamped(self._fused_pose, self.filter_pose())
+            filtered_pose: Pose = self.filter_pose(fused_pose)
+            _fill_pose_stamped(self._fused_pose, filtered_pose)
             self._fused_pose_pub.publish(self._fused_pose)
             #TODO Reset poses after fusion to ensure we use fresh pairs? Or keep latest?
             # Decision depends on desired fusion strategy. Let's keep latest for now, otherwise:
@@ -113,11 +111,29 @@ class MarkerPoseFusion:
             self._fuse_and_publish()
             rate.sleep()
 
-    def filter_pose(self) -> Pose:
+    def setup_filter(self, filter_type: FilterType=FilterType.noFilter) -> None:
+        # noinspection PyFinal
+        self._filter_type: Final[FilterType] = filter_type
+        if filter_type == FilterType.noFilter:
+            return
+        elif filter_type == FilterType.movingAverage:
+            self._pose_window: Deque[Pose] = deque(maxlen=_FILTERING_MOVING_WINDOW_LENGTH)
+            '''A moving window of a number of pose measurements to filter for a smooth signal.'''
+        elif filter_type == FilterType.oneEuro:
+            pass
+        elif filter_type == FilterType.SLERP:
+            pass
+        elif filter_type == FilterType.orientationBased:
+            pass
+        else:
+            pass
+
+    def filter_pose(self, pose: Pose) -> Pose:
         match self._filter_type:
             case FilterType.noFilter:
-                return self._pose_window.pop()
+                return pose
             case FilterType.movingAverage:
+                self._pose_window.append(pose)
                 x_sum, y_sum, z_sum, qx_sum, qy_sum, qz_sum, qw_sum = 0.,0.,0.,0.,0.,0.,0.
                 for pose in self._pose_window:
                     x_sum += pose.Position.x
@@ -136,7 +152,7 @@ class MarkerPoseFusion:
             case FilterType.orientationBased:
                 pass
         
-        return self._pose_window.pop()
+        return pose
 
 if __name__ == '__main__':
     try:
