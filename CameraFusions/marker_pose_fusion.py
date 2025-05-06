@@ -9,7 +9,7 @@ from geometry_msgs.msg import PoseStamped
 from geometry_msgs import msg.Pose, msg.Position, msg.Quaternion
 from CameraFusions.CameraFusion import pose_fusion, Matrix3x3, Pose, Position, Quaternion
 
-_FILTERING_MOVING_WINDOW_LENGTH: int = 5
+_FILTERING_MOVING_WINDOW_LENGTH: Final[int] = 5
 
 
 class FilterType(Enum):
@@ -20,8 +20,6 @@ class FilterType(Enum):
     oneEuro = auto()
 
 class PoseFilter:
-    # noinspection PyFinal
-    _FILTERING_MOVING_WINDOW_LENGTH: Final[int] = 5
     def __init__(self, filter_type: FilterType):
         self.filter_type: Final[FilterType] = filter_type
         if filter_type == FilterType.noFilter:
