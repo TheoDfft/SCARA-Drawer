@@ -101,12 +101,9 @@ class PoseFilter:
                     qy_sum += pose.q.y
                     qz_sum += pose.q.z
                     qw_sum += pose.q.w
-                return Pose(Position(x_sum / _FILTERING_MOVING_WINDOW_LENGTH, y_sum / _FILTERING_MOVING_WINDOW_LENGTH,
-                                     z_sum / _FILTERING_MOVING_WINDOW_LENGTH),
-                            Quaternion(qw_sum / _FILTERING_MOVING_WINDOW_LENGTH,
-                                       qx_sum / _FILTERING_MOVING_WINDOW_LENGTH,
-                                       qy_sum / _FILTERING_MOVING_WINDOW_LENGTH,
-                                       qz_sum / _FILTERING_MOVING_WINDOW_LENGTH))
+                length: int = min(_FILTERING_MOVING_WINDOW_LENGTH, len(self._pose_window))
+                return Pose(Position(x_sum / length, y_sum / length, z_sum / length),
+                            Quaternion(qw_sum / length, qx_sum / length, qy_sum / length, qz_sum / length))
             case FilterType.SLERP:
                 pass
             case FilterType.oneEuro:
