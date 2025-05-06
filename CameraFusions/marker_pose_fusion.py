@@ -1,8 +1,23 @@
 #!/usr/bin/env python3
+from enum import Enum, auto
+from typing import Deque
+from collections import deque
+
 import rospy
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs import msg.Pose, msg.Position, msg.Quaternion
 from CameraFusions.CameraFusion import pose_fusion, Matrix3x3, Pose, Position, Quaternion
+
+_FILTERING_MOVING_WINDOW_LENGTH: int = 5
+
+
+class FilterType(Enum):
+    noFilter = auto()
+    movingAverage = auto()
+    orientationBased = auto()
+    SLERP = auto()
+    oneEuro = auto()
+
 
 def _fill_pose_stamped(msg: PoseStamped, pose: Pose) -> None:
     msg.pose.Position.x = pose.Position.x
@@ -39,6 +54,11 @@ class MarkerPoseFusion:
         self._fused_pose_pub = rospy.Publisher(self._output_topic, PoseStamped, queue_size=10)
         #Fields for pose fusion
         self._fused_pose: PoseStamped = PoseStamped()
+
+        self._pose_window: Deque[Pose] = deque(maxlen = _FILTERING_MOVING_WINDOW_LENGTH)
+        '''A moving window of a number of pose measurements to filter for a smooth signal.'''
+        self._filter_type: FilterType = FilterType.noFilter
+
         self.camera1_cov: Matrix3x3 #TODO fill with some values - will be dynamic in the future
         self.camera2_cov: Matrix3x3 #TODO fill with some values - will be dynamic in the future
 
@@ -71,7 +91,8 @@ class MarkerPoseFusion:
             # --- Fusion Logic Goes Here ---
             fused_pose, _ = pose_fusion(self.latest_pose_1, self.latest_pose_2, self.camera1_cov, self.camera2_cov)
             # -----------------------------
-            _fill_pose_stamped(self._fused_pose, fused_pose)
+            self._pose_window.append(fused_pose)
+            _fill_pose_stamped(self._fused_pose, self.filter_pose())
             self._fused_pose_pub.publish(self._fused_pose)
             #TODO Reset poses after fusion to ensure we use fresh pairs? Or keep latest?
             # Decision depends on desired fusion strategy. Let's keep latest for now, otherwise:
@@ -91,6 +112,31 @@ class MarkerPoseFusion:
         while not rospy.is_shutdown():
             self._fuse_and_publish()
             rate.sleep()
+
+    def filter_pose(self) -> Pose:
+        match self._filter_type:
+            case FilterType.noFilter:
+                return self._pose_window.pop()
+            case FilterType.movingAverage:
+                x_sum, y_sum, z_sum, qx_sum, qy_sum, qz_sum, qw_sum = 0.,0.,0.,0.,0.,0.,0.
+                for pose in self._pose_window:
+                    x_sum += pose.Position.x
+                    y_sum += pose.Position.y
+                    z_sum += pose.Position.z
+                    qx_sum += pose.q.x
+                    qy_sum += pose.q.y
+                    qz_sum += pose.q.z
+                    qw_sum += pose.q.w
+                return Pose(Position(x_sum/_FILTERING_MOVING_WINDOW_LENGTH, y_sum/_FILTERING_MOVING_WINDOW_LENGTH, z_sum/_FILTERING_MOVING_WINDOW_LENGTH),
+                            Quaternion(qw_sum/_FILTERING_MOVING_WINDOW_LENGTH, qx_sum/_FILTERING_MOVING_WINDOW_LENGTH, qy_sum/_FILTERING_MOVING_WINDOW_LENGTH, qz_sum/_FILTERING_MOVING_WINDOW_LENGTH))
+            case FilterType.SLERP:
+                pass
+            case FilterType.oneEuro:
+                pass
+            case FilterType.orientationBased:
+                pass
+        
+        return self._pose_window.pop()
 
 if __name__ == '__main__':
     try:
