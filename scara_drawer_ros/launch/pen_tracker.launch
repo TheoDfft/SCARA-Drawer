@@ -4,8 +4,8 @@
     <arg name="visualize" default="true" />
     <arg name="marker_frame"    default="aruco_marker_link"/>
     <arg name="camera_frame"    default="camera_link"/>
-
-    <node pkg="tf" type="static_transform_publisher" name="camera_transform_publisher" args="0.0 0.15 0.20 1 0 0 0 world $(arg camera_frame) 100" />
+    <arg name="desired_pose_topic"    default="/aruco_single/pose"/>
+    <node pkg="tf" type="static_transform_publisher" name="camera_transform_publisher" args="0.0 0.15 0.20 0 -1 0 0 world $(arg camera_frame) 100" />
     <node pkg="tf" type="static_transform_publisher" name="pen_tip_transform_publisher" args="0.0 0.0 -0.077 0 0 0 1 $(arg marker_frame) pen_tip 100" />
 
     <include file="$(find aruco_ros)/launch/single.launch">
@@ -21,11 +21,12 @@
     <!-- <node pkg="scara_drawer_ros" type="pose_fused_publisher.py" name="pose_fused_publisher" output="screen"/> -->
 
     <!-- Launch the Pen Tracking Controller -->
-    <!-- <node pkg="scara_drawer_ros" type="pen_tracking_controller.py" name="pen_tracking_controller" output="screen">
-        <param name="control_rate" value="3.0" /> 
+    <node pkg="scara_drawer_ros" type="pen_tracking_controller.py" name="pen_tracking_controller" output="screen">
+        <param name="control_rate" value="10.0" /> 
         <param name="max_velocity" value="0.2" /> 
-        <param name="goal_tolerance" value="0.0005" /> 
-    </node> -->
+        <param name="goal_tolerance" value="0.0001" /> 
+        <param name="desired_pose_topic" value="$(arg desired_pose_topic)" />
+    </node>
 
   
     <!-- <node pkg="rosbag" type="play" name="pose_player" args="$(find scara_drawer_ros)/data/test_pose_player.bag /tool/kinematics_pose:=/tool/desired_pose"/> -->
