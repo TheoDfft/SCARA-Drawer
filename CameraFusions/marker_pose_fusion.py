@@ -4,6 +4,7 @@ from typing import Deque, Final
 from collections import deque
 
 import rospy
+from OneEuroFilter import OneEuroFilter
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs import msg.Pose, msg.Position, msg.Quaternion
 from CameraFusions.CameraFusion import pose_fusion, Matrix3x3, Pose, Position, Quaternion
@@ -120,7 +121,55 @@ class MarkerPoseFusion:
             self._pose_window: Deque[Pose] = deque(maxlen=_FILTERING_MOVING_WINDOW_LENGTH)
             '''A moving window of a number of pose measurements to filter for a smooth signal.'''
         elif filter_type == FilterType.oneEuro:
-            pass
+            configpx = {
+                'freq': 120,  # Hz
+                'mincutoff': 1.0,  # Hz
+                'beta': 0.1,
+                'dcutoff': 1.0
+            }
+            self._fpx = OneEuroFilter(**configpx)
+            configpy = {
+                'freq': 120,  # Hz
+                'mincutoff': 1.0,  # Hz
+                'beta': 0.1,
+                'dcutoff': 1.0
+            }
+            self._fpy = OneEuroFilter(**configpy)
+            configpz = {
+                'freq': 120,  # Hz
+                'mincutoff': 1.0,  # Hz
+                'beta': 0.1,
+                'dcutoff': 1.0
+            }
+            self._fpz = OneEuroFilter(**configpz)
+            configqx = {
+                'freq': 120,  # Hz
+                'mincutoff': 1.0,  # Hz
+                'beta': 0.1,
+                'dcutoff': 1.0
+            }
+            self._fqx = OneEuroFilter(**configqx)
+            configqy = {
+                'freq': 120,  # Hz
+                'mincutoff': 1.0,  # Hz
+                'beta': 0.1,
+                'dcutoff': 1.0
+            }
+            self._fqy = OneEuroFilter(**configqy)
+            configqz = {
+                'freq': 120,  # Hz
+                'mincutoff': 1.0,  # Hz
+                'beta': 0.1,
+                'dcutoff': 1.0
+            }
+            self._fqz = OneEuroFilter(**configqz)
+            configqw = {
+                'freq': 120,  # Hz
+                'mincutoff': 1.0,  # Hz
+                'beta': 0.1,
+                'dcutoff': 1.0
+            }
+            self._fqw = OneEuroFilter(**configqw)
         elif filter_type == FilterType.SLERP:
             pass
         elif filter_type == FilterType.orientationBased:
@@ -148,7 +197,8 @@ class MarkerPoseFusion:
             case FilterType.SLERP:
                 pass
             case FilterType.oneEuro:
-                pass
+                return Pose(Position(self._fpx(pose.Position.x), self._fpy(pose.Position.y), self._fpz(pose.Position.z)),
+                            Quaternion(self._fqx(pose.q.x), self._fqy(pose.q.y), self._fqz(pose.q.z), self._fqw(pose.q.w)))
             case FilterType.orientationBased:
                 pass
         
