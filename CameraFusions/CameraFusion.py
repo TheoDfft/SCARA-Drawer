@@ -56,6 +56,12 @@ class Quaternion:
         return Quaternion(self.w / scalar, self.x / scalar,
                            self.y / scalar, self.z / scalar)
 
+    def __add__(self, other: 'Quaternion') -> 'Quaternion':
+        return Quaternion(self.w + other.w, self.x + other.x, self.y + other.y, self.z + other.z)
+
+    def __neg__(self) -> 'Quaternion':
+        return Quaternion(-self.w, -self.x, -self.y, -self.z)
+
     def as_rotation_vector(self) -> np.ndarray:
         norm = np.sqrt(self.w ** 2 + self.x ** 2 + self.y ** 2 + self.z ** 2)
         w = self.w / norm
@@ -87,7 +93,7 @@ class OnlinePoseCovariance:
     def __init__(self):
         self.forgetting_factor: float = 0.95
         self.n: int = 0
-        self.mean: float = np.zeros(6)
+        self.mean = np.zeros(6)
         self.M2: PoseCovariance = np.zeros((6, 6))  # Sum of squared deviations
 
     def update(self, pose: Pose):
@@ -177,12 +183,14 @@ def orientation_fusion(q1: Quaternion, q2: Quaternion,
 
     M: Matrix4x4 = w1 * np.outer(q1, q1) + w2 * np.outer(q2, q2) # M = V*Delta*V_transpose
 
+    cov: Matrix3x3 = _fuse_orientation_cov(cov1, cov2)
+
     # Eigen decomposition
     try:
         eigenvalues, eigenvectors = np.linalg.eigh(M)
     except np.linalg.LinAlgError:
         # Fallback to simple averaging if decomposition fails
-        return (q1 + q2) / np.linalg.norm(q1 + q2)
+        return (q1 + q2) / np.linalg.norm(q1 + q2), cov
     # Taking the last EigenVector = the Eigenvector respective to the largest Eigenvalue
     q: Quaternion = Quaternion.from_array(eigenvectors[:, np.argmax(eigenvalues)])
     # Normalize the quaternion
@@ -191,8 +199,6 @@ def orientation_fusion(q1: Quaternion, q2: Quaternion,
     # Ensure consistent hemisphere with first quaternion
     if np.dot(q, q1) < 0:
         q *= -1
-
-    cov: Matrix3x3 = _fuse_orientation_cov(cov1, cov2)
 
     return q, cov
 

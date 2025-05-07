@@ -121,7 +121,6 @@ def _create_pose_from_msg_pose(msg_pose: msg.Pose) -> Pose:
     return Pose(Position(msg_pose.Position.x, msg_pose.Position.y, msg_pose.Position.z),
                 Quaternion(msg.pose.orientation.w, msg.pose.orientation.x, msg.pose.orientation.y,msg.pose.orientation.z))
 
-
 class MarkerPoseFusion:
     def __init__(self):
         """
