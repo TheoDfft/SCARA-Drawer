@@ -4,6 +4,7 @@ import rospy
 import sys
 import os
 import signal
+import time
 from servo_control import ServoController
 from open_manipulator_msgs.srv import SetJointPosition, SetJointPositionRequest, SetJointPositionResponse
 from open_manipulator_msgs.msg import JointPosition
@@ -16,11 +17,12 @@ class ServoServiceNode:
         
         # Get parameters from the parameter server
         gpio_pin = rospy.get_param('~gpio_pin', 17)
+        button_pin = rospy.get_param('~button_pin', 18)
         initial_angle = rospy.get_param('~initial_angle', 0)
         
         # Initialize servo controller
         try:
-            self.servo = ServoController(pin=gpio_pin, initial_angle=initial_angle)
+            self.servo = ServoController(pin=gpio_pin, button_pin=button_pin, initial_angle=initial_angle)
             rospy.loginfo(f"Servo controller initialized on GPIO pin {gpio_pin}")
         except Exception as e:
             rospy.logerr(f"Failed to initialize servo controller: {e}")
@@ -55,14 +57,13 @@ class ServoServiceNode:
             position = req.joint_position.position
             
             if len(position) > 0:
-                rospy.loginfo(f"Gripper position value: {position[0]}")
                 # Positive value typically means open gripper
                 if position[0] > 0:
-                    rospy.loginfo("Received request to open gripper - calling pen_up()")
+                    rospy.loginfo("Raising pen...")
                     self.servo.pen_up()
                 # Negative or zero value typically means close gripper
                 else:
-                    rospy.loginfo("Received request to close gripper - calling pen_down()")
+                    rospy.loginfo("Lowering pen...")
                     # You could map different closing values to different pen_down angles if needed
                     self.servo.pen_down()
             else:
@@ -90,6 +91,14 @@ class ServoServiceNode:
     def run(self):
         """Run the node"""
         rospy.loginfo("Servo service node running. Press Ctrl+C to exit.")
+
+        #Continually check for the button press (active low). If pressed, call the pen_down() method.
+        while not rospy.is_shutdown():
+            if self.servo.button_pressed() and not self.servo.lowered_pen:
+                self.servo.pen_down()
+            elif not self.servo.button_pressed() and self.servo.lowered_pen:
+                self.servo.pen_up()
+            time.sleep(0.1)
         rospy.spin()
         
 if __name__ == "__main__":

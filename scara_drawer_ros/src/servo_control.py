@@ -15,20 +15,26 @@ except ImportError:
 class ServoController:
     """Class to control a servo motor via PWM"""
     
-    def __init__(self, pin=17, freq=50, initial_angle=0):
+    def __init__(self, pin=17, button_pin=18, freq=50, initial_angle=0):
         """Initialize the servo controller
         
         Args:
             pin (int): GPIO pin number (BCM mode)
+            button_pin (int): GPIO pin number for the button (BCM mode)
             freq (int): PWM frequency in Hz
             initial_angle (int): Initial angle to set the servo
         """
         # Define the GPIO pin for the servo
         self.servo_pin = pin
+        self.button_pin = button_pin
+        self.lowered_pen = False
         
         # Configure GPIO settings
         GPIO.setmode(GPIO.BCM)
         GPIO.setwarnings(False)
+
+        # Set the GPIO pin for the button as an input with an internal pull-up resistor
+        GPIO.setup(self.button_pin, GPIO.IN)
         
         # Setup the GPIO pin for PWM
         GPIO.setup(self.servo_pin, GPIO.OUT)
@@ -62,7 +68,7 @@ class ServoController:
         
         # Convert angle to pulse width for display
         pulse_width = 500 + (angle * (2000 / 180))
-        print(f"Setting angle: {angle:.1f}°, Pulse width: {int(pulse_width)} µsec, Duty cycle: {duty:.1f}%")
+        # print(f"Setting angle: {angle:.1f}°, Pulse width: {int(pulse_width)} µsec, Duty cycle: {duty:.1f}%")
         
         # Allow time for servo to respond
         time.sleep(0.1)
@@ -70,7 +76,7 @@ class ServoController:
         # Stop pulse to prevent jitter
         self.pwm.ChangeDutyCycle(0)
     
-    def set_angle(self, target_angle, smooth=True, num_pulses=3):
+    def set_angle(self, target_angle, smooth=False, num_pulses=2):
         """Set servo to specified angle with improved reliability"""
         if not (0 <= target_angle <= 180):
             print("Error: Angle must be between 0 and 180 degrees")
@@ -106,7 +112,8 @@ class ServoController:
         Lift the pen up by setting servo to 0 degrees
         """
         print("Lifting pen up")
-        self.set_angle(0, smooth=True)
+        self.lowered_pen = False
+        self.set_angle(0, smooth=False)
         
     def pen_down(self, bottom_angle=17):
         """
@@ -114,7 +121,13 @@ class ServoController:
         Default angle is 18 degrees
         """
         print(f"Lowering pen down to {bottom_angle} degrees")
-        self.set_angle(bottom_angle, smooth=True)
+        self.lowered_pen = True
+        self.set_angle(bottom_angle, smooth=False)
+
+    def button_pressed(self):
+        """Check if the button is pressed"""
+        button_state = GPIO.input(self.button_pin)
+        return button_state == GPIO.LOW
     
     def cleanup(self):
         """Clean up GPIO resources"""
@@ -174,5 +187,5 @@ class ServoController:
 # Main execution
 if __name__ == "__main__":
     # Create and run a servo controller
-    servo = ServoController(pin=17, initial_angle=0)
+    servo = ServoController(pin=17, button_pin=18, initial_angle=0)
     servo.run_interactive() 
