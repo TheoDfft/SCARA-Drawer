@@ -4,6 +4,7 @@ from enum import Enum, auto
 from typing import Deque, Final, List
 from collections import deque
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 
 from CameraFusion import Pose, Position, Quaternion
 
@@ -154,8 +155,22 @@ if __name__ == '__main__':
 
 
     values: List[float] = q_y_list
-    plt.plot(values)
-    plt.show()
+
+    fig = go.Figure(data=[go.Scatter(
+        x=list(range(len(values))),
+        y=values,
+        mode='markers+lines',
+        hovertemplate='Index: %{x}<br>Value: %{y}<extra></extra>'
+    )])
+    fig.update_layout(
+        title='Interactive Measurement Plot',
+        xaxis_title='Measurement Index',
+        yaxis_title='Measurement Value'
+    )
+
+    fig.show()
+    # plt.plot(values)
+    # plt.show()
 
     filter_type : FilterType = FilterType.movingAverage
     pose_filter: PoseFilter = PoseFilter(filter_type)
@@ -165,7 +180,19 @@ if __name__ == '__main__':
         filtered_poses.append(pose_filter.filter_pose(pose))
 
     filtered_values: List[float] = [filtered_pose.q.y for filtered_pose in filtered_poses]
-    plt.plot(filtered_values)
-    plt.show()
-    pass
+    filtered_fig = go.Figure(data=[go.Scatter(
+        x=list(range(len(filtered_values))),
+        y=filtered_values,
+        mode='markers+lines',
+        hovertemplate='Index: %{x}<br>Value: %{y}<extra></extra>'
+    )])
+    filtered_fig.update_layout(
+        title='Interactive Measurement Plot',
+        xaxis_title='Measurement Index',
+        yaxis_title='Measurement Value'
+    )
+    filtered_fig.show()
+    # plt.plot(filtered_values)
+    # plt.show()
+    # print(covv.covariance)
 
