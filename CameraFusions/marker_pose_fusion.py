@@ -15,7 +15,6 @@ _FILTERING_MOVING_WINDOW_LENGTH: Final[int] = 5
 class FilterType(Enum):
     noFilter = auto()
     movingAverage = auto()
-    orientationBased = auto()
     SLERP = auto()
     oneEuro = auto()
 
@@ -79,8 +78,6 @@ class PoseFilter:
             self._fqw = OneEuroFilter(**configqw)
         elif filter_type == FilterType.SLERP:
             pass
-        elif filter_type == FilterType.orientationBased:
-            pass
         else:
             pass
 
@@ -108,9 +105,6 @@ class PoseFilter:
                 return Pose(
                     Position(self._fpx(pose.Position.x), self._fpy(pose.Position.y), self._fpz(pose.Position.z)),
                     Quaternion(self._fqx(pose.q.x), self._fqy(pose.q.y), self._fqz(pose.q.z), self._fqw(pose.q.w)))
-            case FilterType.orientationBased:
-                pass
-
         return pose
 
 def _fill_pose_stamped(msg: PoseStamped, pose: Pose) -> None:

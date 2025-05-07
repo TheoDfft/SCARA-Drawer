@@ -13,7 +13,6 @@ _FILTERING_MOVING_WINDOW_LENGTH: Final[int] = 50
 class FilterType(Enum):
     noFilter = auto()
     movingAverage = auto()
-    orientationBased = auto()
     SLERP = auto()
     oneEuro = auto()
 
@@ -77,8 +76,8 @@ class PoseFilter:
             }
             self._fqw = OneEuroFilter(**configqw)
         elif filter_type == FilterType.SLERP:
-            pass
-        elif filter_type == FilterType.orientationBased:
+            # self._h = 0.1  # Normalized cutoff (0-1)
+            # self._current_q = np.array([1, 0, 0, 0])
             pass
         else:
             pass
@@ -102,6 +101,17 @@ class PoseFilter:
                 return Pose(Position(x_sum / length, y_sum / length, z_sum / length),
                             Quaternion(qw_sum / length, qx_sum / length, qy_sum / length, qz_sum / length))
             case FilterType.SLERP:
+                # if pose.q @ self._current_q < 0:
+                #     pose.q = -pose.q
+                #
+                #     # Adaptive interpolation factor based on angular distance[1][2]
+                # theta = np.arccos(np.clip(pose.q @ self._current_q, -1, 1))
+                # h_adaptive = self.h * (theta / np.pi)  # Scale h by angular difference[2]
+                #
+                # # Apply SLERP[4]
+                # self._current_q = geometric_slerp(self._current_q, pose.q, [h_adaptive])[0]
+                # pose.q = self._current_q
+                # return pose
                 pass
             case FilterType.oneEuro:
                 return Pose(
