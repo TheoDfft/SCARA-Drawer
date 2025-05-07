@@ -56,10 +56,57 @@ class Quaternion:
         return Quaternion(self.w / scalar, self.x / scalar,
                            self.y / scalar, self.z / scalar)
 
+    def as_rotation_vector(self) -> np.ndarray:
+        norm = np.sqrt(self.w ** 2 + self.x ** 2 + self.y ** 2 + self.z ** 2)
+        w = self.w / norm
+        x = self.x / norm
+        y = self.y / norm
+        z = self.z / norm
+
+        # Compute rotation angle
+        theta = 2 * np.arccos(np.clip(w, -1.0, 1.0))
+
+        # Handle small angles to avoid division by zero
+        epsilon = 1e-7
+        sin_half_theta = np.sqrt(x ** 2 + y ** 2 + z ** 2)
+
+        if sin_half_theta < epsilon:
+            return np.zeros(3)
+
+        # Compute rotation vector components
+        scale = theta / sin_half_theta
+        return np.array([x * scale, y * scale, z * scale])
+
 class Pose:
     def __init__(self, position: Position, q: Quaternion):
         self.Position: Position = position
         self.q: Quaternion = q
+
+
+class OnlinePoseCovariance:
+    def __init__(self):
+        self.forgetting_factor: float = 0.95
+        self.n: int = 0
+        self.mean: float = np.zeros(6)
+        self.M2: PoseCovariance = np.zeros((6, 6))  # Sum of squared deviations
+
+    def update(self, pose: Pose):
+        rot_vector: np.ndarray = pose.q.as_rotation_vector()
+        x = np.concatenate([pose.Position.to_array(), rot_vector])
+
+        self.n += 1
+        delta = x - self.mean
+        self.mean += delta / self.n
+        delta2 = x - self.mean
+        self.M2 += np.outer(delta, delta2)
+
+        #Forgetting factor
+        self.mean = self.forgetting_factor * self.mean + (1 - self.forgetting_factor) * x
+        self.M2 = self.forgetting_factor * self.M2 + (1 - self.forgetting_factor) * np.outer(x - self.mean, x - self.mean)
+
+    @property
+    def covariance(self):
+        return self.M2 / (self.n - 1) if self.n > 1 else np.zeros((6, 6))
 
 
 def pose_fusion(pose1: Pose, pose2: Pose, covariance1: PoseCovariance, covariance2: PoseCovariance) -> Tuple[Pose, PoseCovariance]:

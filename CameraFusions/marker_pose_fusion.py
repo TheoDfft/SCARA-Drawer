@@ -7,7 +7,7 @@ import rospy
 from OneEuroFilter import OneEuroFilter
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs import msg.Pose, msg.Position, msg.Quaternion
-from CameraFusions.CameraFusion import pose_fusion, Matrix3x3, Pose, Position, Quaternion
+from CameraFusions.CameraFusion import pose_fusion, Matrix3x3, Pose, Position, Quaternion, OnlinePoseCovariance
 
 _FILTERING_MOVING_WINDOW_LENGTH: Final[int] = 5
 
@@ -145,8 +145,8 @@ class MarkerPoseFusion:
 
         self.filter: PoseFilter = PoseFilter(FilterType.noFilter)
 
-        self.camera1_cov: Matrix3x3 #TODO fill with some values - will be dynamic in the future
-        self.camera2_cov: Matrix3x3 #TODO fill with some values - will be dynamic in the future
+        self.camera1_cov: OnlinePoseCovariance = OnlinePoseCovariance() #TODO fill with some values - will be dynamic in the future
+        self.camera2_cov: OnlinePoseCovariance = OnlinePoseCovariance() #TODO fill with some values - will be dynamic in the future
 
         # Initialize subscribers
         self._pose1_sub = rospy.Subscriber(self._input_topic_1, PoseStamped, self._pose1_callback)
@@ -160,12 +160,14 @@ class MarkerPoseFusion:
         Callback function for the first pose topic. Updates the latest pose.
         """
         self.latest_pose_1 = _create_pose_from_msg_pose(msg.pose)
+        self.camera1_cov.update(self.latest_pose_1)
 
     def _pose2_callback(self, msg: PoseStamped):
         """
         Callback function for the second pose topic. Updates the latest pose.
         """
         self.latest_pose_2 = _create_pose_from_msg_pose(msg.pose)
+        self.camera2_cov.update(self.latest_pose_2)
 
     def _fuse_and_publish(self):
         """
@@ -175,7 +177,7 @@ class MarkerPoseFusion:
         #Check if both poses have been received
         if self.latest_pose_1 is not None and self.latest_pose_2 is not None:
             # --- Fusion Logic Goes Here ---
-            fused_pose, _ = pose_fusion(self.latest_pose_1, self.latest_pose_2, self.camera1_cov, self.camera2_cov)
+            fused_pose, _ = pose_fusion(self.latest_pose_1, self.latest_pose_2, self.camera1_cov.covariance, self.camera2_cov.covariance)
             # -----------------------------
             filtered_pose: Pose = self.filter.filter_pose(fused_pose)
             _fill_pose_stamped(self._fused_pose, filtered_pose)
