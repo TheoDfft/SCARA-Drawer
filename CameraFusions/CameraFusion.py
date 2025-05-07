@@ -59,9 +59,6 @@ class Quaternion:
     def __add__(self, other: 'Quaternion') -> 'Quaternion':
         return Quaternion(self.w + other.w, self.x + other.x, self.y + other.y, self.z + other.z)
 
-    def __neg__(self) -> 'Quaternion':
-        return Quaternion(-self.w, -self.x, -self.y, -self.z)
-
     def as_rotation_vector(self) -> np.ndarray:
         norm = np.sqrt(self.w ** 2 + self.x ** 2 + self.y ** 2 + self.z ** 2)
         w = self.w / norm
@@ -88,7 +85,6 @@ class Pose:
         self.Position: Position = position
         self.q: Quaternion = q
 
-
 class OnlinePoseCovariance:
     def __init__(self):
         self.forgetting_factor: float = 0.95
@@ -114,18 +110,27 @@ class OnlinePoseCovariance:
     def covariance(self):
         return self.M2 / (self.n - 1) if self.n > 1 else np.zeros((6, 6))
 
+#used adjusted covariances using the correlation to the position
+def adjusted_orientation_cov(coo: Matrix3x3, cpo: Matrix3x3, cpp: Matrix3x3) -> Matrix3x3:
+    # Propagate position uncertainty to orientation space
+    J: Matrix3x3 = cpo @ np.linalg.inv(cpp)  # Sensitivity matrix
+    cov_adj: Matrix3x3 = coo + J @ cpp @ J.T  # Add propagated uncertainty
+    return cov_adj
 
+        #Regularizing covariances to ensure invertibility
 def pose_fusion(pose1: Pose, pose2: Pose, covariance1: PoseCovariance, covariance2: PoseCovariance) -> Tuple[Pose, PoseCovariance]:
-    pos_cov1 = covariance1[:3, :3]
-    pos_cov2 = covariance2[:3, :3]
-    orientation_cov1 = covariance1[3:, 3:]
-    orientation_cov2 = covariance2[3:, 3:]
-    pos, pos_cov = position_fusion(pose1.Position, pose2.Position, pos_cov1, pos_cov2)
+    cov_pp1 = covariance1[:3, :3]
+    cov_pp2 = covariance2[:3, :3]
+    cov_po1 = covariance1[:3, 3:]
+    cov_po2 = covariance2[:3, 3:]
+    cov_oo1 = covariance1[3:, 3:]
+    cov_oo2 = covariance2[3:, 3:]
+    pos, pos_cov = position_fusion(pose1.Position, pose2.Position, cov_pp1, cov_pp2, cov_po1, cov_po2)
 
     quaternion1: Quaternion = pose1.q
     quaternion2: Quaternion = pose2.q
     orientation, orientation_cov = orientation_fusion(quaternion1, quaternion2,
-                                                      orientation_cov1, orientation_cov2)
+                                                      cov_oo1, cov_oo2)
 
     zeros: Matrix3x3 = np.zeros((3, 3))
     covariance: PoseCovariance = np.block([[pos_cov, zeros],
@@ -134,7 +139,7 @@ def pose_fusion(pose1: Pose, pose2: Pose, covariance1: PoseCovariance, covarianc
     return pose, covariance
 
 def position_fusion(pos1: Position, pos2: Position,
-                    cov1: Matrix3x3, cov2: Matrix3x3) -> Tuple[Position, Matrix3x3]:
+                    cov1: Matrix3x3, cov2: Matrix3x3, cov1_po: Matrix3x3, cov2_po: Matrix3x3) -> Tuple[Position, Matrix3x3]:
 
     cov1_inv: Matrix3x3 = cholesky_inverse(cov1)
     cov2_inv: Matrix3x3 = cholesky_inverse(cov2)
@@ -147,29 +152,31 @@ def position_fusion(pos1: Position, pos2: Position,
     w2 = w2 / sumw
 
     #Calculate the fused covariance and position
-    cov: Matrix3x3 = cholesky_inverse(cov1_inv + cov2_inv)
+    cov: Matrix3x3 = cholesky_inverse(cov1_inv + cov2_inv - cholesky_inverse(cov1_po) - cholesky_inverse(cov2_po))
     pos: Position = Position.from_array(cov @ (((w1 * cov1_inv) @ pos1) + ((w2 * cov2_inv) @ pos2)))
 
     return pos, cov
 
 
 def orientation_fusion(q1: Quaternion, q2: Quaternion,
-                       cov1: Matrix3x3, cov2: Matrix3x3) -> Tuple[Quaternion, Matrix3x3]:
+                       cov1: PoseCovariance, cov2: PoseCovariance) -> Tuple[Quaternion, Matrix3x3]:
     #Normalize the quaternions
     q1 = q1 / np.linalg.norm(q1.to_array())
     q2 = q2 / np.linalg.norm(q2.to_array())
 
     # Antipodal check using dot product threshold
     if q1 @ q2 < 0:
-        q2 = -q2  # Flip to same hemisphere
+        q2 *= -1  # Flip to same hemisphere
 
-    #Regularizing covariances to ensure invertibility
-    cov1 += 1e-6 * np.eye(3)
-    cov2 += 1e-6 * np.eye(3)
+    #Adjusting the covariance matrix to take into account sensitivity due to position
+    cov1_oo: Matrix3x3 = adjusted_orientation_cov(cov1[3:, 3:], cov1[:3, 3:], cov1[:3, :3])
+    cov2_oo: Matrix3x3 = adjusted_orientation_cov(cov2[3:, 3:], cov2[:3, 3:], cov2[:3, :3])
+    cov1_oo += 1e-6 * np.eye(3)
+    cov2_oo += 1e-6 * np.eye(3)
 
     #Using trace
-    w1: float = 1/(np.trace(cov1) + 1e-9)
-    w2: float = 1/(np.trace(cov2) + 1e-9)
+    w1: float = 1/(np.trace(cov1_oo) + 1e-9)
+    w2: float = 1/(np.trace(cov2_oo) + 1e-9)
 
     ##################TODO CONSIDER AFTER A LOT OF DATA FOR BUILDING THE COVARIANCE MATRICES
     # Using det
@@ -183,7 +190,7 @@ def orientation_fusion(q1: Quaternion, q2: Quaternion,
 
     M: Matrix4x4 = w1 * np.outer(q1, q1) + w2 * np.outer(q2, q2) # M = V*Delta*V_transpose
 
-    cov: Matrix3x3 = _fuse_orientation_cov(cov1, cov2)
+    cov: Matrix3x3 = _fuse_orientation_cov(cov1_oo, cov2_oo)
 
     # Eigen decomposition
     try:
