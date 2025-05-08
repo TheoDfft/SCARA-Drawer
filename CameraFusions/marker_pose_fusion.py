@@ -7,7 +7,7 @@ import rospy
 from OneEuroFilter import OneEuroFilter
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs import msg.Pose, msg.Position, msg.Quaternion
-from CameraFusion import pose_fusion, Matrix3x3, Pose, Position, Quaternion, OnlinePoseCovariance
+from CameraFusions.CameraFusion import pose_fusion, Matrix3x3, Pose, Position, Quaternion, OnlinePoseCovariance
 
 _FILTERING_MOVING_WINDOW_LENGTH: Final[int] = 5
 
