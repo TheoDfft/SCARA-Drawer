@@ -3,13 +3,13 @@
 
     <arg name="visualize" default="true" />
     <arg name="markerSize" value="0.025" />
-    <arg name="markerId" value="10" />
+    <arg name="markerId" value="1" />
 
     <arg name="desired_pose_topic"    default="/aruco_single/pose"/>
     
-    <node pkg="tf" type="static_transform_publisher" name="camera_blue_transform_publisher" args="0.040 0.10 0.294 1 0 0 0 world camera_blue_link 100" />
-    <node pkg="tf" type="static_transform_publisher" name="camera_green_transform_publisher" args="-0.040 0.10 0.295 1 0 0 0 world camera_green_link 100" />
-    <node pkg="tf" type="static_transform_publisher" name="pen_tip_transform_publisher" args="0.0 0.0045 -0.078 0 0 0 1 camera_blue_marker_link pen_tip 100" />
+    <node pkg="tf" type="static_transform_publisher" name="camera_blue_transform_publisher" args="0.0375 0.10 0.293 1 0 0 0 world camera_blue_link 100" />
+    <node pkg="tf" type="static_transform_publisher" name="camera_green_transform_publisher" args="-0.0375 0.10 0.290 1 0 0 0 world camera_green_link 100" />
+    <node pkg="tf" type="static_transform_publisher" name="pen_tip_transform_publisher" args="0.0 0.032732 -0.082252 0 0 0 1 camera_green_marker_link pen_tip 100" />
 
     <node pkg="aruco_ros" type="single" name="aruco_camera_blue">
         <remap from="/camera_info" to="/camera_blue/camera_info" />
@@ -17,7 +17,7 @@
         <param name="image_is_rectified" value="False"/>
         <param name="marker_size"        value="$(arg markerSize)"/>
         <param name="marker_id"          value="$(arg markerId)"/>
-        <param name="reference_frame"    value="world"/>   <!-- frame in which the marker pose will be refered -->
+        <param name="reference_frame"    value="world"/>
         <param name="camera_frame"       value="camera_blue_link"/>
         <param name="marker_frame"       value="camera_blue_marker_link" />
         <param name="corner_refinement"  value="HARRIS" />
