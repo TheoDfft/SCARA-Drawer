@@ -115,7 +115,7 @@ class ServoController:
         self.lowered_pen = False
         self.set_angle(0, smooth=False)
         
-    def pen_down(self, bottom_angle=17):
+    def pen_down(self, bottom_angle=25):
         """
         Lower the pen down by setting servo to the specified bottom angle
         Default angle is 18 degrees

@@ -18,15 +18,16 @@ class PenTrackerController:
         self.control_rate_hz = rospy.get_param("~control_rate", 20.0)  # Hz
         self.max_velocity = rospy.get_param("~max_velocity", 0.1)  # m/s
         self.goal_tolerance = rospy.get_param("~goal_tolerance", 0.002) # meters
-        self.desired_pose_topic = rospy.get_param("~desired_pose_topic", "/aruco_single/pose")
+        self.desired_pose_topic = rospy.get_param("~desired_pose_topic", "/aruco_fused_pose")
 
         if self.control_rate_hz <= 0:
             rospy.logerr("Control rate must be positive.")
             return
 
-        self.step_distance = self.max_velocity / self.control_rate_hz
+        # self.step_distance = self.max_velocity / self.control_rate_hz #0.2/10 = 0.02
+        self.step_distance = 0.005
         # Path time slightly longer than control period to allow for execution
-        self.path_time = 1.0 / self.control_rate_hz
+        self.path_time = 0.1
 
         rospy.loginfo(f"Control Rate: {self.control_rate_hz} Hz")
         rospy.loginfo(f"Max Velocity: {self.max_velocity} m/s")
@@ -63,11 +64,11 @@ class PenTrackerController:
 
         #Wait for subscribers to connect
         rospy.loginfo("Waiting for subscribers to connect...")
-        rospy.sleep(1.0)
+        rospy.sleep(3.0)
 
         # Control Loop Timer
         self.control_timer = rospy.Timer(
-            rospy.Duration(1.5 / self.control_rate_hz), self.control_loop_callback
+            rospy.Duration(1.0 / self.control_rate_hz), self.control_loop_callback
         )
 
         rospy.loginfo("Pen Tracker Controller initialized.")
@@ -103,7 +104,7 @@ class PenTrackerController:
         desired_pos = np.array([
             local_desired.pose.position.x,
             local_desired.pose.position.y,
-            local_actual.pose.position.z
+            0.057
         ])
 
         # Calculate Intermediate Target Position

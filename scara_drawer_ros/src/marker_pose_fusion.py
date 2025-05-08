@@ -9,7 +9,7 @@ import rospy
 from geometry_msgs.msg import PoseStamped, Pose
 from CameraFusion import pose_fusion, Matrix3x3, Pose_Custom, Position_Custom, Quaternion_Custom, OnlinePoseCovariance
 
-_FILTERING_MOVING_WINDOW_LENGTH: Final[int] = 10
+_FILTERING_MOVING_WINDOW_LENGTH: Final[int] = 5
 
 
 class FilterType(Enum):
@@ -27,55 +27,55 @@ class PoseFilter:
             self._pose_window: Deque[Pose_Custom] = deque(maxlen=_FILTERING_MOVING_WINDOW_LENGTH)
             '''A moving window of a number of pose measurements to filter for a smooth signal.'''
         # elif filter_type == FilterType.oneEuro:
-            configpx = {
-                'freq': 120,  # Hz
-                'mincutoff': 1.0,  # Hz
-                'beta': 0.1,
-                'dcutoff': 1.0
-            }
-            self._fpx = OneEuroFilter(**configpx)
-            configpy = {
-                'freq': 120,  # Hz
-                'mincutoff': 1.0,  # Hz
-                'beta': 0.1,
-                'dcutoff': 1.0
-            }
-            self._fpy = OneEuroFilter(**configpy)
-            configpz = {
-                'freq': 120,  # Hz
-                'mincutoff': 1.0,  # Hz
-                'beta': 0.1,
-                'dcutoff': 1.0
-            }
-            self._fpz = OneEuroFilter(**configpz)
-            configqx = {
-                'freq': 120,  # Hz
-                'mincutoff': 1.0,  # Hz
-                'beta': 0.1,
-                'dcutoff': 1.0
-            }
-            self._fqx = OneEuroFilter(**configqx)
-            configqy = {
-                'freq': 120,  # Hz
-                'mincutoff': 1.0,  # Hz
-                'beta': 0.1,
-                'dcutoff': 1.0
-            }
-            self._fqy = OneEuroFilter(**configqy)
-            configqz = {
-                'freq': 120,  # Hz
-                'mincutoff': 1.0,  # Hz
-                'beta': 0.1,
-                'dcutoff': 1.0
-            }
-            self._fqz = OneEuroFilter(**configqz)
-            configqw = {
-                'freq': 120,  # Hz
-                'mincutoff': 1.0,  # Hz
-                'beta': 0.1,
-                'dcutoff': 1.0
-            }
-            self._fqw = OneEuroFilter(**configqw)
+            # configpx = {
+            #     'freq': 120,  # Hz
+            #     'mincutoff': 1.0,  # Hz
+            #     'beta': 0.1,
+            #     'dcutoff': 1.0
+            # }
+            # self._fpx = OneEuroFilter(**configpx)
+            # configpy = {
+            #     'freq': 120,  # Hz
+            #     'mincutoff': 1.0,  # Hz
+            #     'beta': 0.1,
+            #     'dcutoff': 1.0
+            # }
+            # self._fpy = OneEuroFilter(**configpy)
+            # configpz = {
+            #     'freq': 120,  # Hz
+            #     'mincutoff': 1.0,  # Hz
+            #     'beta': 0.1,
+            #     'dcutoff': 1.0
+            # }
+            # self._fpz = OneEuroFilter(**configpz)
+            # configqx = {
+            #     'freq': 120,  # Hz
+            #     'mincutoff': 1.0,  # Hz
+            #     'beta': 0.1,
+            #     'dcutoff': 1.0
+            # }
+            # self._fqx = OneEuroFilter(**configqx)
+            # configqy = {
+            #     'freq': 120,  # Hz
+            #     'mincutoff': 1.0,  # Hz
+            #     'beta': 0.1,
+            #     'dcutoff': 1.0
+            # }
+            # self._fqy = OneEuroFilter(**configqy)
+            # configqz = {
+            #     'freq': 120,  # Hz
+            #     'mincutoff': 1.0,  # Hz
+            #     'beta': 0.1,
+            #     'dcutoff': 1.0
+            # }
+            # self._fqz = OneEuroFilter(**configqz)
+            # configqw = {
+            #     'freq': 120,  # Hz
+            #     'mincutoff': 1.0,  # Hz
+            #     'beta': 0.1,
+            #     'dcutoff': 1.0
+            # }
+            # self._fqw = OneEuroFilter(**configqw)
         elif filter_type == FilterType.SLERP:
             pass
         else:
@@ -146,7 +146,7 @@ class MarkerPoseFusion:
         self._fused_pose.header.frame_id = 'world'
 
 
-        self.filter: PoseFilter = PoseFilter(FilterType.noFilter)
+        self.filter: PoseFilter = PoseFilter(FilterType.movingAverage)
 
         self.camera1_cov: OnlinePoseCovariance = OnlinePoseCovariance() #TODO fill with some values - will be dynamic in the future
         # self.camera2_cov: OnlinePoseCovariance = OnlinePoseCovariance() #TODO fill with some values - will be dynamic in the future
@@ -185,6 +185,8 @@ class MarkerPoseFusion:
             # -----------------------------
             filtered_pose: Pose_Custom = self.filter.filter_pose(self.latest_pose_1)
             _fill_pose_stamped(self._fused_pose, filtered_pose,self.latest_pose_1_stamp)
+
+            
             self._fused_pose_pub.publish(self._fused_pose)
             #TODO Reset poses after fusion to ensure we use fresh pairs? Or keep latest?
             # Decision depends on desired fusion strategy. Let's keep latest for now, otherwise:
