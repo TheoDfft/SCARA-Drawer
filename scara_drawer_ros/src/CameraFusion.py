@@ -1,4 +1,5 @@
-from typing import Tuple, Annotated, Union
+from typing import Tuple, Union
+from typing_extensions import Annotated
 import numpy as np
 import numpy.typing as npt
 import numpy.linalg as la
@@ -9,7 +10,7 @@ Matrix4x4 = Annotated[npt.NDArray[np.float64], (4, 4)]
 PoseCovariance = Annotated[npt.NDArray[np.float64], (6, 6)]
 
 
-class Position:
+class Position_Custom:
     def __init__(self, x: float, y: float, z: float):
         self.x: float = x
         self.y: float = y
@@ -19,18 +20,18 @@ class Position:
         return np.array([self.x, self.y, self.z])
 
     @staticmethod
-    def from_array(array) -> 'Position':
-        return Position(array[0], array[1], array[2])
+    def from_array(array) -> 'Position_Custom':
+        return Position_Custom(array[0], array[1], array[2])
 
-    def __matmul__(self, other: Union['Position', np.ndarray]) -> float:
-        if isinstance(other, Position):
+    def __matmul__(self, other: Union['Position_Custom', np.ndarray]) -> float:
+        if isinstance(other, Position_Custom):
             return self.x * other.x + self.y * other.y + self.z * other.z
         elif isinstance(other, np.ndarray):
             return np.dot(self.to_array(), other)
         else:
-            raise TypeError(f"Unsupported operand type for @: 'Position' and '{type(other).__name__}'")
+            raise TypeError(f"Unsupported operand type for @: 'Position_Custom' and '{type(other).__name__}'")
 
-class Quaternion:
+class Quaternion_Custom:
     def __init__(self, w: float, x: float, y: float, z: float):
         self.w: float = w
         self.x: float = x
@@ -41,23 +42,23 @@ class Quaternion:
         return np.array([self.w, self.x, self.y, self.z])
 
     @staticmethod
-    def from_array(array) -> 'Quaternion':
-        return Quaternion(array[0], array[1], array[2], array[3])
+    def from_array(array) -> 'Quaternion_Custom':
+        return Quaternion_Custom(array[0], array[1], array[2], array[3])
 
-    def __matmul__(self, other: Union['Quaternion', np.ndarray]) -> float:
-        if isinstance(other, Quaternion):
+    def __matmul__(self, other: Union['Quaternion_Custom', np.ndarray]) -> float:
+        if isinstance(other, Quaternion_Custom):
             return self.w * other.w + self.x * other.x + self.y * other.y + self.z * other.z
         elif isinstance(other, np.ndarray):
             return np.dot(self.to_array(), other)
         else:
-            raise TypeError(f"Unsupported operand type for @: 'Quaternion' and '{type(other).__name__}'")
+            raise TypeError(f"Unsupported operand type for @: 'Quaternion_Custom' and '{type(other).__name__}'")
 
-    def __truediv__(self, scalar: float) -> 'Quaternion':
-        return Quaternion(self.w / scalar, self.x / scalar,
+    def __truediv__(self, scalar: float) -> 'Quaternion_Custom':
+        return Quaternion_Custom(self.w / scalar, self.x / scalar,
                            self.y / scalar, self.z / scalar)
 
-    def __add__(self, other: 'Quaternion') -> 'Quaternion':
-        return Quaternion(self.w + other.w, self.x + other.x, self.y + other.y, self.z + other.z)
+    def __add__(self, other: 'Quaternion_Custom') -> 'Quaternion_Custom':
+        return Quaternion_Custom(self.w + other.w, self.x + other.x, self.y + other.y, self.z + other.z)
 
     def as_rotation_vector(self) -> np.ndarray:
         norm = np.sqrt(self.w ** 2 + self.x ** 2 + self.y ** 2 + self.z ** 2)
@@ -80,10 +81,10 @@ class Quaternion:
         scale = theta / sin_half_theta
         return np.array([x * scale, y * scale, z * scale])
 
-class Pose:
-    def __init__(self, position: Position, q: Quaternion):
-        self.Position: Position = position
-        self.q: Quaternion = q
+class Pose_Custom:
+    def __init__(self, position: Position_Custom, q: Quaternion_Custom):
+        self.Position_Custom: Position_Custom = position
+        self.q: Quaternion_Custom = q
 
 class OnlinePoseCovariance:
     def __init__(self):
@@ -92,9 +93,9 @@ class OnlinePoseCovariance:
         self.mean = np.zeros(6)
         self.M2: PoseCovariance = np.zeros((6, 6))  # Sum of squared deviations
 
-    def update(self, pose: Pose):
+    def update(self, pose: Pose_Custom):
         rot_vector: np.ndarray = pose.q.as_rotation_vector()
-        x = np.concatenate([pose.Position.to_array(), rot_vector])
+        x = np.concatenate([pose.Position_Custom.to_array(), rot_vector])
 
         self.n += 1
         delta = x - self.mean
@@ -118,28 +119,28 @@ def adjusted_orientation_cov(coo: Matrix3x3, cpo: Matrix3x3, cpp: Matrix3x3) -> 
     return cov_adj
 
         #Regularizing covariances to ensure invertibility
-def pose_fusion(pose1: Pose, pose2: Pose, covariance1: PoseCovariance, covariance2: PoseCovariance) -> Tuple[Pose, PoseCovariance]:
+def pose_fusion(pose1: Pose_Custom, pose2: Pose_Custom, covariance1: PoseCovariance, covariance2: PoseCovariance) -> Tuple[Pose_Custom, PoseCovariance]:
     cov_pp1 = covariance1[:3, :3]
     cov_pp2 = covariance2[:3, :3]
     cov_po1 = covariance1[:3, 3:]
     cov_po2 = covariance2[:3, 3:]
     cov_oo1 = covariance1[3:, 3:]
     cov_oo2 = covariance2[3:, 3:]
-    pos, pos_cov = position_fusion(pose1.Position, pose2.Position, cov_pp1, cov_pp2, cov_po1, cov_po2)
+    pos, pos_cov = position_fusion(pose1.Position_Custom, pose2.Position_Custom, cov_pp1, cov_pp2, cov_po1, cov_po2)
 
-    quaternion1: Quaternion = pose1.q
-    quaternion2: Quaternion = pose2.q
+    quaternion1: Quaternion_Custom = pose1.q
+    quaternion2: Quaternion_Custom = pose2.q
     orientation, orientation_cov = orientation_fusion(quaternion1, quaternion2,
                                                       cov_oo1, cov_oo2)
 
     zeros: Matrix3x3 = np.zeros((3, 3))
     covariance: PoseCovariance = np.block([[pos_cov, zeros],
                                            [zeros, orientation_cov]])
-    pose: Pose = Pose(pos, orientation)
+    pose: Pose_Custom = Pose_Custom(pos, orientation)
     return pose, covariance
 
-def position_fusion(pos1: Position, pos2: Position,
-                    cov1: Matrix3x3, cov2: Matrix3x3, cov1_po: Matrix3x3, cov2_po: Matrix3x3) -> Tuple[Position, Matrix3x3]:
+def position_fusion(pos1: Position_Custom, pos2: Position_Custom,
+                    cov1: Matrix3x3, cov2: Matrix3x3, cov1_po: Matrix3x3, cov2_po: Matrix3x3) -> Tuple[Position_Custom, Matrix3x3]:
 
     cov1_inv: Matrix3x3 = cholesky_inverse(cov1)
     cov2_inv: Matrix3x3 = cholesky_inverse(cov2)
@@ -153,13 +154,13 @@ def position_fusion(pos1: Position, pos2: Position,
 
     #Calculate the fused covariance and position
     cov: Matrix3x3 = cholesky_inverse(cov1_inv + cov2_inv - cholesky_inverse(cov1_po) - cholesky_inverse(cov2_po))
-    pos: Position = Position.from_array(cov @ (((w1 * cov1_inv) @ pos1) + ((w2 * cov2_inv) @ pos2)))
+    pos: Position_Custom = Position_Custom.from_array(cov @ (((w1 * cov1_inv) @ pos1) + ((w2 * cov2_inv) @ pos2)))
 
     return pos, cov
 
 
-def orientation_fusion(q1: Quaternion, q2: Quaternion,
-                       cov1: PoseCovariance, cov2: PoseCovariance) -> Tuple[Quaternion, Matrix3x3]:
+def orientation_fusion(q1: Quaternion_Custom, q2: Quaternion_Custom,
+                       cov1: PoseCovariance, cov2: PoseCovariance) -> Tuple[Quaternion_Custom, Matrix3x3]:
     #Normalize the quaternions
     q1 = q1 / np.linalg.norm(q1.to_array())
     q2 = q2 / np.linalg.norm(q2.to_array())
@@ -199,7 +200,7 @@ def orientation_fusion(q1: Quaternion, q2: Quaternion,
         # Fallback to simple averaging if decomposition fails
         return (q1 + q2) / np.linalg.norm(q1 + q2), cov
     # Taking the last EigenVector = the Eigenvector respective to the largest Eigenvalue
-    q: Quaternion = Quaternion.from_array(eigenvectors[:, np.argmax(eigenvalues)])
+    q: Quaternion_Custom = Quaternion_Custom.from_array(eigenvectors[:, np.argmax(eigenvalues)])
     # Normalize the quaternion
     q /= np.linalg.norm(q)
 

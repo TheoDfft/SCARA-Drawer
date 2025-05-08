@@ -2,7 +2,7 @@
     
 
     <arg name="visualize" default="true" />
-    <arg name="markerSize" value="0.025" />
+    <arg name="markerSize" value="0.0335" />
     <arg name="markerId" value="1" />
 
     <arg name="desired_pose_topic"    default="/aruco_single/pose"/>
